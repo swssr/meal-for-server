@@ -70,18 +70,12 @@ app.post("/pay", async (req, res) => {
 
   payload.HashCheck = ENC;
 
-  // console.log({ ENC });
-
   const params = new URLSearchParams(payload).toString();
 
   try {
     await Axios.post(`https://pay.ozow.com/?${params}`).then((_res) => {
-      // console.log(_res.data);
-
       res.set("Content-Type", "text/html");
       res.end(`${_res.data}`);
-
-      // res.status(200).send(_res);
     });
   } catch (err) {
     res.status(500).send(err);
