@@ -1,13 +1,17 @@
+/* eslint-disable quotes */
 const express = require("express");
 const morgan = require("morgan");
 const helmet = require("helmet");
 const cors = require("cors");
+// const sha512 = require("js-sha512");
+
+const crypto = require("crypto");
 
 require("dotenv").config();
 
+const { default: Axios } = require("axios");
 const middlewares = require("./middlewares");
 const api = require("./api");
-const { default: Axios } = require("axios");
 
 const app = express();
 
@@ -42,34 +46,46 @@ app.get("/menu", (req, res) => {
 
 app.post("/pay", async (req, res) => {
   // const payload = req.body || {
+
+  console.log("BODY", req.body);
   const payload = {
     SiteCode: "TSTSTE0001",
     CountryCode: "ZA",
     CurrencyCode: "ZAR",
     Amount: 10.0,
-    TransactionReference: "12345",
-    // BankReference: "12345",
+    // TransactionReference: "12345",
     IsTest: true,
     privateKey: "215114531AFF7134A94C88CEEA48E",
-    NotifyUrl: "https://meal-for.nw.r.appspot.com/notify",
+    // BankReference: "12345",
+    // NotifyUrl: "https://meal-for.nw.r.appspot.com/notify",
+    // NotifyUrl: "http://locahost:5000/notify",
+    ...req.body,
   };
 
-  const HashCheck = Object.values(payload).join("");
+  const HashCheck = Object.values(payload).join("").toLowerCase();
 
-  payload.HashCheck = HashCheck;
+  const hash = crypto.createHash("sha512");
+  const data = hash.update(HashCheck, "utf-8");
+  const ENC = data.digest("hex");
 
-  await Axios.post("https://pay.ozow.com/", payload, {
-    params: payload,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-  })
-    .then((res) => {
-      console.log(JSON.stringify(res));
-      res.status(200).json(res);
-    })
-    .catch((err) => {
-      console.log(JSON.stringify(err));
-      res.status(500).json(err);
+  payload.HashCheck = ENC;
+
+  // console.log({ ENC });
+
+  const params = new URLSearchParams(payload).toString();
+
+  try {
+    await Axios.post(`https://pay.ozow.com/?${params}`).then((_res) => {
+      // console.log(_res.data);
+
+      res.set("Content-Type", "text/html");
+      res.end(`${_res.data}`);
+
+      // res.status(200).send(_res);
     });
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
 /**
@@ -78,12 +94,14 @@ app.post("/pay", async (req, res) => {
  */
 
 app.get("/notify", (req, res) => {
+  // eslint-disable-next-line no-console
   console.log(JSON.stringify({ req, res }));
 
   return res.status(200).json({ req, res });
 });
 
 app.post("/notify", (req, res) => {
+  // eslint-disable-next-line no-console
   console.log(JSON.stringify({ req, res }));
   return res.status(200).json({ req, res });
 });
