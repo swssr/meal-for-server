@@ -15,10 +15,30 @@ const api = require("./api");
 
 const app = express();
 
+/* eslint-disable no-console */
+const faunadb = require("faunadb");
+
+const {
+  Collection,
+  Ref,
+  Get,
+  Map,
+  Lambda,
+  Paginate,
+  Var,
+  Match,
+  Index,
+} = faunadb.query;
+const client = new faunadb.Client({ secret: process.env.FAUNA_KEY });
+
 app.use(morgan("dev"));
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioClient = require("twilio")(accountSid, authToken);
 
 app.get("/", (req, res) => {
   res.json({
@@ -26,7 +46,27 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/menu", (req, res) => {
+app.get("/expressPay", async (req, res) => {
+  twilioClient.messages
+    .create({
+      body: "This is the ship that made the Kessel Run in fourteen parsecs?",
+      from: "+12393449069",
+      to: "+27794701191",
+    })
+    .then((message) => res.status(200).send(message.sid))
+    .catch((err) => res.status(500).send({ err }));
+});
+
+app.post("/sms", (req, res) => {
+  const twiml = new MessagingResponse();
+
+  twiml.message("The Robots are coming! Head for the hills!");
+
+  res.writeHead(200, { "Content-Type": "text/xml" });
+  res.end(twiml.toString());
+});
+
+app.get("/menu", async (req, res) => {
   const menu = [
     {
       name: "Call Me Brunch",
@@ -41,7 +81,18 @@ app.get("/menu", (req, res) => {
       description: "Golden toast with banana berries.",
     },
   ];
-  res.json(menu);
+
+  try {
+    // const menu = await client.query(Get(Collection("menu")));
+    const menu = await Map(
+      Paginate(Match(Index("all_depts"))),
+      Lambda("X", Get(Var("X")))
+    );
+    res.json({ menu });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
 });
 
 app.post("/pay", async (req, res) => {
@@ -73,11 +124,15 @@ app.post("/pay", async (req, res) => {
   const params = new URLSearchParams(payload).toString();
 
   try {
-    await Axios.post(`https://pay.ozow.com/?${params}`).then((_res) => {
-      res.set("Content-Type", "text/html");
-      res.end(`${_res.data}`);
-    });
+    res.status(200).send(`https://pay.ozow.com/?${params}`);
+    // await Axios.post(`https://pay.ozow.com/?${params}`).then((_res) => {
+    //   // res.set("Content-Type", "text/html");
+    //   // res.end(`${_res.data}`);
+
+    // });
   } catch (err) {
+    // res.status(200).send(`https://pay.ozow.com/?${params}`);
+
     res.status(500).send(err);
   }
 });
