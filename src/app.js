@@ -70,12 +70,14 @@ app.get("/menu", async (req, res) => {
       img:
         "https://res.cloudinary.com/swssr/image/upload/v1604919303/tablefor/trq7ue8esyflkcbvozfj.png",
       description: "Golden toast with banana berries.",
+      price: 70.0,
     },
     {
       name: "Grilled Fish, Veggies",
       img:
         "https://res.cloudinary.com/swssr/image/upload/v1604919460/tablefor/ggl6gzokjnyioyb8gm7n.png",
       description: "Golden toast with banana berries.",
+      price: 80.0,
     },
   ];
 
@@ -236,6 +238,7 @@ async function handleExternalPayment(req, res) {
 }
 
 async function generatePayUrl(req, res) {
+  // return console.log(req.body) && res.send(req.body);
   var data = {
     SiteCode: "GOR-GOR-003",
     CountryCode: "ZA",
@@ -256,8 +259,6 @@ async function generatePayUrl(req, res) {
     IsTest: "false",
     ...req.body,
     PrivateKey: "PApThuCfhweIWRgbfwAaDYVk6vZcJZKV",
-    // HashCheck:
-    //   "576C5B579787143B2980B5F98311770CBBBCA28DB0D8F0649015BF24853338E2D22FD9013F0B2DAFD5CBE564150EDF6330121B6C503133B79B876E472EC54943",
   };
 
   const concatLowerCaseString = Object.values(data)
@@ -277,7 +278,7 @@ async function generatePayUrl(req, res) {
       Host: "i-pay.co.za",
       ApiKey: "nscbbbBmVuhu0ZGObWgZTJpoPxgCaGVu",
       "Content-Type": "application/json",
-      Cookie: "__cfduid=d0d80c1a72d7de916e51bd684b46967b81605910926",
+      // Cookie: "__cfduid=d0d80c1a72d7de916e51bd684b46967b81605910926",
     },
     data: JSON.stringify(data),
   };
@@ -295,17 +296,17 @@ async function generatePayUrl(req, res) {
   }
 }
 
-async function SendSMS(body) {
+async function SendSMS(body, number = "+27794701191") {
   await twilioClient.messages
     .create({
       body:
         body ||
         "This is the ship that made the Kessel Run in fourteen parsecs?",
       from: "+12393449069",
-      to: "+27794701191",
+      to: `${number}`,
     })
-    .then((message) => res.status(200).send(message.sid))
-    .catch((err) => res.status(500).send({ err }));
+    .then(console.log)
+    .catch(console.error);
 }
 
 module.exports = app;
