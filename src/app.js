@@ -239,7 +239,7 @@ async function handleExternalPayment(req, res) {
 
 async function generatePayUrl(req, res) {
   // return console.log(req.body) && res.send(req.body);
-  var data = {
+  var payload = {
     SiteCode: "GOR-GOR-003",
     CountryCode: "ZA",
     CurrencyCode: "ZAR",
@@ -261,14 +261,15 @@ async function generatePayUrl(req, res) {
     PrivateKey: "PApThuCfhweIWRgbfwAaDYVk6vZcJZKV",
   };
 
-  const concatLowerCaseString = Object.values(data)
+  const concatLowerCaseString = Object.values(payload)
     .join("")
     .trim()
     .toLowerCase();
   const hash = crypto.createHash("sha512");
   const _data = hash.update(concatLowerCaseString, "utf-8");
   const ENC = _data.digest("hex");
-  data.HashCheck = ENC.toUpperCase();
+
+  payload.HashCheck = ENC.toUpperCase();
 
   var config = {
     method: "post",
@@ -278,21 +279,26 @@ async function generatePayUrl(req, res) {
       Host: "i-pay.co.za",
       ApiKey: "nscbbbBmVuhu0ZGObWgZTJpoPxgCaGVu",
       "Content-Type": "application/json",
-      // Cookie: "__cfduid=d0d80c1a72d7de916e51bd684b46967b81605910926",
+      Cookie: "__cfduid=d0d80c1a72d7de916e51bd684b46967b81605910926",
     },
-    data: JSON.stringify(data),
+    data: JSON.stringify(payload),
   };
 
   try {
-    await Axios(config).then(function (response) {
+    console.log("TRYING TO POST TO IPAY");
+    return await Axios(config).then(async (response) => {
+      console.log("SUCCESS");
+
       console.log(JSON.stringify(response.data));
-      SendSMS(
+      await SendSMS(
         `We've received your order, if you want to pay later use this link.\n${response.data.Url}`
       );
       res.send(response.data.Url);
     });
   } catch (err) {
-    res.status(500).send(err);
+    console.log("FAILED");
+    console.log(err);
+    return res.status(500).send(err);
   }
 }
 
