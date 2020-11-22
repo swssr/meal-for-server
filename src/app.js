@@ -165,7 +165,9 @@ async function urlPayPostManCopy(req, res) {
   await Axios(config)
     .then(function (response) {
       console.log(JSON.stringify(response.data));
-      SendSMS(`Please use this link to donate \n ${response.data.Url}`);
+      SendSMS(
+        `You are the solution to the problem of hunger to this world. Human kindly donate R20 for those who are less fortunate to afford a meal for the day. MealFor Thanks you. \n Click here ${response.data.Url}`
+      );
       res.send(response.data.Url);
     })
     .catch(function (error) {
@@ -234,47 +236,61 @@ async function handleExternalPayment(req, res) {
 }
 
 async function generatePayUrl(req, res) {
-  console.log("BODY", req.body);
-  const payload = {
+  var data = {
     SiteCode: "GOR-GOR-003",
     CountryCode: "ZA",
     CurrencyCode: "ZAR",
-    Amount: 10.01,
-    TransactionReference: "MealForINV",
-    BankReference: "MealForINV",
-    IsTest: false,
-    PrivateKey: process.env.OZOW_PK,
-    // BankReference: "12345",
-    // NotifyUrl: "https://meal-for.nw.r.appspot.com/notify",
-    // NotifyUrl: "http://locahost:5000/notify",
+    Amount: "20.00",
+    TransactionReference: "MealFor-Ref",
+    BankReference: "MealFor Payment",
+    Optional1: "1",
+    Optional2: "2",
+    Optional3: "3",
+    Optional4: "4",
+    Optional5: "5",
+    Customer: "Customer",
+    CancelUrl: "https://hub.vercel.app/cancel",
+    ErrorUrl: "https://hub.vercel.app/error",
+    SuccessUrl: "https://hub.vercel.app/success",
+    NotifyUrl: "https://meal-for.nw.r.appspot.com/notify",
+    IsTest: "false",
     ...req.body,
+    PrivateKey: "PApThuCfhweIWRgbfwAaDYVk6vZcJZKV",
+    // HashCheck:
+    //   "576C5B579787143B2980B5F98311770CBBBCA28DB0D8F0649015BF24853338E2D22FD9013F0B2DAFD5CBE564150EDF6330121B6C503133B79B876E472EC54943",
   };
 
-  const concatLowerCaseString = (
-    Object.values(payload).join("") + process.env.OZOW_PK
-  ).toLowerCase();
-
+  const concatLowerCaseString = Object.values(data)
+    .join("")
+    .trim()
+    .toLowerCase();
   const hash = crypto.createHash("sha512");
-  const data = hash.update(concatLowerCaseString, "utf-8");
-  const ENC = data.digest("hex");
+  const _data = hash.update(concatLowerCaseString, "utf-8");
+  const ENC = _data.digest("hex");
+  data.HashCheck = ENC.toUpperCase();
 
-  payload.HashCheck = ENC.toUpperCase();
-
-  const params = new URLSearchParams(payload).toString();
+  var config = {
+    method: "post",
+    url: "https://i-pay.co.za/api/MerchantApiV1/PostPaymentRequest",
+    headers: {
+      Accept: "application/json",
+      Host: "i-pay.co.za",
+      ApiKey: "nscbbbBmVuhu0ZGObWgZTJpoPxgCaGVu",
+      "Content-Type": "application/json",
+      Cookie: "__cfduid=d0d80c1a72d7de916e51bd684b46967b81605910926",
+    },
+    data: JSON.stringify(data),
+  };
 
   try {
-    const _url = `https://pay.ozow.com/?${params}`;
-
-    // SendSMS(`Hey, If you want to pay later use this link.\n${_url}`);
-    res.status(200).send(_url);
-    // await Axios.post(`https://pay.ozow.com/?${params}`).then((_res) => {
-    //   // res.set("Content-Type", "text/html");
-    //   // res.end(`${_res.data}`);
-
-    // });
+    await Axios(config).then(function (response) {
+      console.log(JSON.stringify(response.data));
+      SendSMS(
+        `We've received your order, if you want to pay later use this link.\n${response.data.Url}`
+      );
+      res.send(response.data.Url);
+    });
   } catch (err) {
-    // res.status(200).send(`https://pay.ozow.com/?${params}`);
-
     res.status(500).send(err);
   }
 }
